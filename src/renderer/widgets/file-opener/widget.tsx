@@ -8,16 +8,31 @@ import { Settings } from './settings';
 import { openFileSvg, openFolderSvg } from '@/widgets/file-opener/icons';
 import styles from './widget.module.scss';
 import { SettingsType, settingsTypeNamesCapital } from '@/widgets/file-opener/settingsType';
-import { useCallback } from 'react';
+import { IconsType } from '@/widgets/file-opener/iconsType';
+import { useCallback, useState, useEffect } from 'react';
 
 function WidgetComp({settings, widgetApi, sharedState}: WidgetReactComponentProps<Settings>) {
   const { shell } = widgetApi;
-  const { files, folders, type, openIn } = settings;
+  const { files, folders, type, openIn, iconPath, iconType } = settings;
   const {apps} = sharedState.apps;
   const openInApp = openIn !== '' ? apps[openIn] : undefined;
 
   const paths = (type === SettingsType.Folder ? folders : files).filter(path=>path!=='');
-  const iconSvg = type === SettingsType.Folder ? openFolderSvg : openFileSvg;
+
+  const [iconSvg, setIconSvg] = useState<string>(type === SettingsType.Folder ? openFolderSvg : openFileSvg);
+
+  useEffect(() => {
+    if (iconType === IconsType.Local) {
+      fetch(iconPath)
+        .then(response => response.text())
+        .then(svgString => {
+          setIconSvg(svgString);
+        })
+        .catch(() => {
+          setIconSvg(type === SettingsType.Folder ? openFolderSvg : openFileSvg);
+        });
+    }
+  }, [iconType, iconPath]);
 
   const onBtnClick: React.MouseEventHandler<HTMLButtonElement> = useCallback(_ => {
     if (openInApp) {
