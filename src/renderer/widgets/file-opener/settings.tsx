@@ -5,10 +5,13 @@
 
 import { Button, CreateSettingsState, List, ReactComponent, SettingsEditorReactComponentProps, addItemToList, browse14Svg, delete14Svg, removeItemFromList, SettingBlock, SettingRow, SettingActions, EntityId, mapIdListToEntityList, manage14Svg } from '@/widgets/appModules';
 import { SettingsType, isSettingsType, settingsTypeActionNames, settingsTypeNames, settingsTypeNamesCapital, settingsTypes } from '@/widgets/file-opener/settingsType';
+import { IconsType, isIconsType, iconsTypeActionNames, iconsTypeNames, iconsTypeNamesCapital, iconsTypes } from '@/widgets/file-opener/iconsType';
 import { useEffect, useMemo, useRef, useState } from 'react';
 
 export interface Settings {
   type: SettingsType,
+  iconType: IconsType,
+  iconPath: string,
   files: List<string>,
   folders: List<string>,
   openIn: EntityId
@@ -16,6 +19,8 @@ export interface Settings {
 
 export const createSettingsState: CreateSettingsState<Settings> = (settings) => ({
   type: isSettingsType(settings.type) ? settings.type : SettingsType.File,
+  iconType: isIconsType(settings.iconType) ? settings.iconType : IconsType.Embed,
+  iconPath: typeof settings.iconPath === 'string' ? settings.iconPath : '',
   files: Array.isArray(settings.files) ? settings.files.map(path=>typeof path==='string'?path:'') : [''],
   folders: Array.isArray(settings.folders) ? settings.folders.map(path=>typeof path==='string'?path:'') : [''],
   openIn: typeof settings.openIn === 'string' ? settings.openIn : '',
@@ -59,6 +64,9 @@ function SettingsEditorComp({settings, settingsApi, sharedState}: SettingsEditor
     updatePathsSetting(addItemToList(getPathsSetting(), ''))
   const deletePath = (i: number) =>
     updatePathsSetting(removeItemFromList(getPathsSetting(), i))
+
+  const updIconPath = (path: string) =>
+    updateSettings({...settings, iconPath: path})
 
   let pickPath: (curPath: string) => Promise<string | null>;
   if (settings.type === SettingsType.Folder) {
@@ -155,6 +163,62 @@ function SettingsEditorComp({settings, settingsApi, sharedState}: SettingsEditor
           ></Button>
         </div>
       </SettingBlock>
+
+      <SettingBlock
+        titleForId='file-opener-icon-type'
+        title='Icon Type'
+        moreInfo='Type of the icon.'
+      >
+        <select id="file-opener-icon-type" value={settings.iconType} onChange={e => {
+          const val = Number(e.target.value);
+          updateSettings({
+            ...settings,
+            iconType: isIconsType(val) ? val : IconsType.Embed
+          })
+        }}>
+          {
+            iconsTypes.map(typeId=>(
+              <option
+                key={typeId}
+                value={typeId}
+              >
+                {iconsTypeActionNames[typeId]}
+              </option>
+            ))
+          }
+        </select>
+      </SettingBlock>
+
+      { settings.iconType === IconsType.Local ?
+        <SettingBlock
+        titleForId='file-opener-icon-path'
+        title={`${iconsTypeNamesCapital[settings.iconType]}s`}
+        moreInfo={`Specify the ${iconsTypeNamesCapital[settings.iconType]}s to open.`}
+        >
+          <SettingRow>
+            <input
+              id={'iconPath'}
+              type="text"
+              value={settings.iconPath}
+              placeholder={`Enter a ${iconsTypeNames[settings.iconType]} path`}
+              onChange={e => updIconPath(e.target.value)}
+            />
+            <SettingActions
+              actions={[{
+                id: 'SELECT-PATH',
+                icon: browse14Svg,
+                title: `Select Icon Path`,
+                doAction: async () => {
+                  const pickedPath = await pickPath(settings.iconPath);
+                  if (pickedPath) {
+                    updIconPath(pickedPath);
+                  }
+                }
+              }]}
+            />
+          </SettingRow>
+        </SettingBlock> : null
+      }
 
       <SettingBlock
         titleForId='file-opener-openIn'
